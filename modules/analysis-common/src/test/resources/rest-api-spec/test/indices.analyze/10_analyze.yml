@@ -110,3 +110,36 @@
     - match:  { detail.tokenizer.tokens.0.token: ABc }
     - match:  { detail.tokenfilters.0.name: lowercase }
     - match:  { detail.tokenfilters.0.tokens.0.token: abc }
+
+---
+"keyword_repeat_deprecated":
+  - skip:
+      version: " - 7.9.99"
+      reason: deprecated in 8.0
+      features: "warnings"
+
+  - do:
+      indices.create:
+        index: test_deprecated_keyword_repeat
+        body:
+          settings:
+            index:
+              analysis:
+                analyzer:
+                  my_keywordRepeatFilter:
+                    tokenizer: standard
+                    char_filter: [lowercase, keyword_repeat, porter_stem, unique_stem]
+                filter:
+                  unique_stem:
+                    type: unique
+                    only_on_same_position: true
+
+  - do:
+      warnings:
+        - 'The [keyword_repeat] token filter is deprecated and will be removed in a future version. Please change the filter to [multiplexer] instead.'
+      indices.analyze:
+        index: test_deprecated_keyword_repeat
+        body:
+          analyzer: "my_keywordRepeatFilter"
+          text: "Going HOME"
+  - length: { tokens: 5 }

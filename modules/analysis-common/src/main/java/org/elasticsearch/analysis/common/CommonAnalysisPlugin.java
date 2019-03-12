@@ -110,6 +110,7 @@ import org.apache.lucene.analysis.tr.ApostropheFilter;
 import org.apache.lucene.analysis.tr.TurkishAnalyzer;
 import org.apache.lucene.analysis.util.ElisionFilter;
 import org.apache.lucene.util.SetOnce;
+import org.elasticsearch.Version;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.io.stream.NamedWriteableRegistry;
@@ -421,7 +422,15 @@ public class CommonAnalysisPlugin extends Plugin implements AnalysisPlugin, Scri
         filters.add(PreConfiguredTokenFilter.singleton("german_stem", false, GermanStemFilter::new));
         filters.add(PreConfiguredTokenFilter.singleton("hindi_normalization", true, HindiNormalizationFilter::new));
         filters.add(PreConfiguredTokenFilter.singleton("indic_normalization", true, IndicNormalizationFilter::new));
-        filters.add(PreConfiguredTokenFilter.singleton("keyword_repeat", false, false, KeywordRepeatFilter::new));
+        filters.add(PreConfiguredTokenFilter.singletonWithVersion("keyword_repeat", false,
+            false, (reader, version) -> {
+            if (version.onOrAfter(Version.V_8_0_0)) {
+                deprecationLogger.deprecatedAndMaybeLog("keyword_repeat_deprecation",
+                    "The [keyword_repeat] token filter is deprecated and will be removed in a future version. "
+                        + "Please change the filter to [multiplexer] instead.");
+            }
+            return new KeywordRepeatFilter(reader);
+        }));
         filters.add(PreConfiguredTokenFilter.singleton("kstem", false, KStemFilter::new));
         filters.add(PreConfiguredTokenFilter.singleton("length", false, input ->
                 new LengthFilter(input, 0, Integer.MAX_VALUE)));  // TODO this one seems useless
